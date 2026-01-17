@@ -26,7 +26,7 @@ src/myao3/infrastructure/
 |-----------|-----|------|
 | _queue | asyncio.Queue[Event] | イベントキュー本体 |
 | _pending | dict[str, Event] | 待機中イベント（identity_key → Event） |
-| _processing | dict[str, Event] | 処理中イベント（identity_key → Event） |
+| _processing | dict[str, Event] | 処理中イベント（event.id → Event） |
 | _delay_tasks | dict[str, asyncio.Task] | 遅延エンキュータスク |
 
 **メソッド:**
@@ -80,7 +80,7 @@ delay パラメータで指定した秒数後にイベントをキューに追�
 
 **処理フロー:**
 
-1. `dequeue()` でイベント取得時、`_processing[key] = event` に記録
+1. `dequeue()` でイベント取得時、`_processing[event.id] = event` に記録
 2. Agent Loop が処理を実行
 3. `mark_done(event)` で `_processing` から削除
 
@@ -88,7 +88,7 @@ delay パラメータで指定した秒数後にイベントをキューに追�
 
 - 新しいイベントは `_pending` に追加される
 - 処理中のイベントは影響を受けない
-- 処理完了後、新しいイベントが dequeue される
+- 新しいイベントは即座に dequeue 可能（複数イベントの同時処理をサポート）
 
 ## テストケース
 
@@ -193,11 +193,11 @@ delay パラメータで指定した秒数後にイベントをキューに追�
 
 ## 完了条件
 
-- [ ] EventQueue クラスが実装されている
-- [ ] enqueue/dequeue が動作する
-- [ ] identity_key による重複制御が動作する
-- [ ] 遅延エンキューが動作する
-- [ ] 遅延中のキャンセルが動作する
-- [ ] mark_done で処理完了を記録できる
-- [ ] pending_count/processing_count が正しく更新される
-- [ ] 全てのテストケースがパスする
+- [x] EventQueue クラスが実装されている
+- [x] enqueue/dequeue が動作する
+- [x] identity_key による重複制御が動作する
+- [x] 遅延エンキューが動作する
+- [x] 遅延中のキャンセルが動作する
+- [x] mark_done で処理完了を記録できる
+- [x] pending_count/processing_count が正しく更新される
+- [x] 全てのテストケースがパスする
