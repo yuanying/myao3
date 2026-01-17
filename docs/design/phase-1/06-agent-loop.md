@@ -196,9 +196,9 @@ CI やテストで実際の LLM を呼び出さないよう、モック機能を
 
 ## 完了条件
 
-- [ ] AgentLoop クラスが実装されている
-- [ ] PingEventHandler が実装されている
-- [ ] strands-agents の Agent を使用して LLM を呼び出せる
-- [ ] MOCK_LLM=true でモック動作する
-- [ ] 処理結果がログに記録される
-- [ ] 全てのテストケースがパスする
+- [x] AgentLoop クラスが実装されている
+- [x] PingEventHandler が実装されている
+- [x] strands-agents の Agent を使用して LLM を呼び出せる
+- [x] MOCK_LLM=true でモック動作する
+- [x] 処理結果がログに記録される
+- [x] 全てのテストケースがパスする
