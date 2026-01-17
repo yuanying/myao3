@@ -1135,16 +1135,16 @@ requires-dist = [
     { name = "litellm", specifier = ">=1.0,<2.0" },
     { name = "pydantic", specifier = ">=2.0,<3.0" },
     { name = "pyyaml", specifier = ">=6.0,<7.0" },
-    { name = "strands-agents", specifier = ">=0.1,<1.0" },
-    { name = "structlog", specifier = ">=24.0,<25.0" },
+    { name = "strands-agents", specifier = ">=0.1,<2.0" },
+    { name = "structlog", specifier = ">=24.0,<26.0" },
     { name = "ulid-py", specifier = ">=1.1,<2.0" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pytest", specifier = ">=8.0,<9.0" },
-    { name = "pytest-asyncio", specifier = ">=0.23,<1.0" },
-    { name = "pytest-cov", specifier = ">=4.0,<5.0" },
+    { name = "pytest", specifier = ">=8.0,<10.0" },
+    { name = "pytest-asyncio", specifier = ">=0.23,<2.0" },
+    { name = "pytest-cov", specifier = ">=4.0,<8.0" },
     { name = "ruff", specifier = ">=0.4,<1.0" },
     { name = "ty", specifier = ">=0.0.12" },
 ]

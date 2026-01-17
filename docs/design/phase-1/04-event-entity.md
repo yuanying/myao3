@@ -169,9 +169,9 @@ ULID（Universally Unique Lexicographically Sortable Identifier）を使用。
 
 ## 完了条件
 
-- [ ] EventType 列挙型が定義されている
-- [ ] Event ベースクラスが定義されている
-- [ ] PingEvent クラスが定義されている
-- [ ] Event ID が ULID で自動生成される
-- [ ] get_identity_key() メソッドが実装されている
-- [ ] 全てのテストケースがパスする
+- [x] EventType 列挙型が定義されている
+- [x] Event ベースクラスが定義されている
+- [x] PingEvent クラスが定義されている
+- [x] Event ID が ULID で自動生成される
+- [x] get_identity_key() メソッドが実装されている
+- [x] 全てのテストケースがパスする
