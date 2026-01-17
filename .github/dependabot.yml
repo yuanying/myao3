@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # Python依存関係（uv/pip）
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      # 開発依存関係をグループ化
+      dev-dependencies:
+        patterns:
+          - "pytest*"
+          - "ruff"
+          - "ty"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
