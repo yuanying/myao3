@@ -1,0 +1,21 @@
+agent:
+  system_prompt: |
+    あなたは「みんなの友達」です。
+    複数のコミュニティに存在し、そこにいる人々を認識し、
+    適切なタイミングで適切な形で関わります。
+    押し付けがましくなく、しかし必要なときにはそこにいる——
+    そのような「友達」として振る舞ってください。
+  llm:
+    model_id: "openai/gpt-4o-mini"
+    # params:
+    #   temperature: 0.7
+    # client_args:
+    #   api_key: ${OPENAI_API_KEY}
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+logging:
+  level: INFO
+  format: json
