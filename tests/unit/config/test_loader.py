@@ -13,7 +13,6 @@ from myao3.config.loader import (
     EnvVarNotFoundError,
     expand_env_vars,
     load_config,
-    parse_cli_args,
 )
 from myao3.config.models import AppConfig
 
@@ -170,28 +169,3 @@ agent:
                 load_config(config_file)
 
             assert "UNDEFINED_VAR" in str(exc_info.value)
-
-
-class TestParseCliArgs:
-    """Tests for CLI argument parsing."""
-
-    def test_parse_config_long_option(self) -> None:
-        """TC-02-007: Parse --config argument."""
-        args = ["--config", "config.yaml"]
-        result = parse_cli_args(args)
-
-        assert result == Path("config.yaml")
-
-    def test_parse_config_short_option(self) -> None:
-        """TC-02-007: Parse -c argument."""
-        args = ["-c", "/path/to/config.yaml"]
-        result = parse_cli_args(args)
-
-        assert result == Path("/path/to/config.yaml")
-
-    def test_default_config_path(self) -> None:
-        """TC-02-008: Default config path is config.yaml."""
-        args: list[str] = []
-        result = parse_cli_args(args)
-
-        assert result == Path("config.yaml")

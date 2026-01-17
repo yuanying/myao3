@@ -5,7 +5,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-import typer
 import yaml
 
 from myao3.config.models import AppConfig
@@ -93,35 +92,3 @@ def load_config(path: Path) -> AppConfig:
 
     expanded_data = expand_env_vars(raw_data)
     return AppConfig(**expanded_data)
-
-
-def parse_cli_args(args: list[str] | None = None) -> Path:
-    """Parse command line arguments to get config file path.
-
-    Args:
-        args: List of command line arguments. If None, uses sys.argv.
-
-    Returns:
-        Path to the configuration file.
-    """
-    app = typer.Typer()
-    result_path: Path = Path("config.yaml")
-
-    @app.command()
-    def main(
-        config: Path = typer.Option(
-            Path("config.yaml"),
-            "--config",
-            "-c",
-            help="Path to the configuration file",
-        ),
-    ) -> None:
-        nonlocal result_path
-        result_path = config
-
-    try:
-        app(args, standalone_mode=False)
-    except SystemExit:
-        pass
-
-    return result_path

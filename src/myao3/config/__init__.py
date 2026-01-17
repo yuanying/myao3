@@ -6,7 +6,6 @@ from myao3.config.loader import (
     ConfigParseError,
     EnvVarNotFoundError,
     load_config,
-    parse_cli_args,
 )
 from myao3.config.models import (
     AgentConfig,
@@ -24,7 +23,6 @@ __all__ = [
     "EnvVarNotFoundError",
     # Functions
     "load_config",
-    "parse_cli_args",
     # Models
     "AgentConfig",
     "AppConfig",
