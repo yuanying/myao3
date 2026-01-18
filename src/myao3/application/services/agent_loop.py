@@ -50,6 +50,9 @@ class AgentLoop:
 
         Returns:
             The LLM response text, or None if no handler found.
+            Note: Per FR-AGENT-001 in requirements.md, this method's return type
+            is defined as None. The response is returned for debugging/testing
+            purposes only and is not used by callers.
 
         Raises:
             Exception: If LLM invocation fails.
