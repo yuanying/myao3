@@ -38,6 +38,7 @@ asyncio_default_fixture_loop_scope = "function"
 dev = [
     "pytest>=8.0,<10.0",
     "pytest-asyncio>=0.23,<2.0",
+    "pytest-aiohttp>=1.0,<2.0",
     "pytest-cov>=4.0,<8.0",
     "ruff>=0.4,<1.0",
     "ty>=0.0.12",
