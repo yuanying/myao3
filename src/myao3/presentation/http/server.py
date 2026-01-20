@@ -2,8 +2,8 @@
 
 import json
 
-import structlog
 from aiohttp import web
+from structlog.stdlib import BoundLogger
 
 from myao3.config.models import ServerConfig
 from myao3.domain.entities.event import EventType, PingEvent
@@ -32,7 +32,7 @@ class HTTPServer:
         self,
         config: ServerConfig,
         event_queue: EventQueue,
-        logger: structlog.BoundLogger,
+        logger: BoundLogger,
     ) -> None:
         self.config = config
         self._event_queue = event_queue
