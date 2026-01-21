@@ -131,11 +131,15 @@ async def _process_event(
         event_queue.mark_done(event)
 
 
-async def main_async(config_path: Path) -> int:
+async def main_async(
+    config_path: Path,
+    shutdown_timeout: float = SHUTDOWN_TIMEOUT,
+) -> int:
     """Async main function.
 
     Args:
         config_path: Path to configuration file.
+        shutdown_timeout: Maximum time in seconds to wait for graceful shutdown.
 
     Returns:
         Exit code (0 for success, non-zero for failure).
@@ -194,8 +198,14 @@ async def main_async(config_path: Path) -> int:
     finally:
         # 7. Shutdown
         logger.info("Shutting down")
-        await http_server.stop()
-        logger.info("myao3 stopped")
+        try:
+            await asyncio.wait_for(http_server.stop(), timeout=shutdown_timeout)
+            logger.info("myao3 stopped")
+        except TimeoutError:
+            logger.warning(
+                "Shutdown timed out, forcing termination",
+                timeout_seconds=shutdown_timeout,
+            )
 
     return 0
 

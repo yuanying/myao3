@@ -329,10 +329,140 @@ class TestRunMainLoop:
 class TestShutdownTimeout:
     """Test cases for shutdown timeout."""
 
-    @pytest.mark.asyncio
-    async def test_shutdown_timeout(self) -> None:
-        """TC-07-007: Shutdown timeout forces termination."""
+    @pytest.fixture
+    def mock_config(self) -> AppConfig:
+        """Create a mock AppConfig."""
+        from myao3.config import (
+            AgentConfig,
+            AppConfig,
+            LLMConfig,
+            LoggingConfig,
+            ServerConfig,
+        )
+
+        return AppConfig(
+            agent=AgentConfig(
+                system_prompt="Test prompt",
+                llm=LLMConfig(model_id="test-model"),
+            ),
+            server=ServerConfig(host="127.0.0.1", port=0),
+            logging=LoggingConfig(level="INFO", format="text"),
+        )
+
+    def test_shutdown_timeout_constant(self) -> None:
+        """SHUTDOWN_TIMEOUT constant is defined as 30 seconds."""
         from myao3.__main__ import SHUTDOWN_TIMEOUT
 
-        # Verify constant is defined as 30 seconds
         assert SHUTDOWN_TIMEOUT == 30
+
+    @pytest.mark.asyncio
+    async def test_shutdown_completes_within_timeout(
+        self, mock_config: AppConfig
+    ) -> None:
+        """Shutdown completes within timeout."""
+        from myao3.__main__ import main_async
+
+        with (
+            patch("myao3.__main__.load_config", return_value=mock_config),
+            patch("myao3.__main__.setup_logging"),
+            patch("myao3.__main__.HTTPServer") as mock_server_class,
+            patch("myao3.__main__.AgentLoop") as mock_agent_loop_class,
+            patch("myao3.__main__.EventQueue") as mock_event_queue_class,
+        ):
+            mock_server = AsyncMock()
+            # stop() completes immediately
+            mock_server.stop = AsyncMock()
+            mock_server_class.return_value = mock_server
+
+            mock_agent_loop = MagicMock()
+            mock_agent_loop.process = AsyncMock()
+            mock_agent_loop_class.return_value = mock_agent_loop
+
+            mock_event_queue = MagicMock()
+            mock_event_queue.dequeue = AsyncMock(side_effect=asyncio.CancelledError)
+            mock_event_queue_class.return_value = mock_event_queue
+
+            async def run_with_shutdown() -> int:
+                task = asyncio.create_task(
+                    main_async(Path("config.yaml"), shutdown_timeout=0.5)
+                )
+                await asyncio.sleep(0.05)
+                task.cancel()
+                try:
+                    return await task
+                except asyncio.CancelledError:
+                    return 0
+
+            exit_code = await run_with_shutdown()
+
+            assert exit_code == 0
+            mock_server.stop.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_shutdown_timeout_forces_termination(
+        self, mock_config: AppConfig
+    ) -> None:
+        """TC-07-007: Shutdown timeout forces termination with warning log."""
+        import os
+        import signal as signal_module
+
+        from myao3.__main__ import main_async
+
+        with (
+            patch("myao3.__main__.load_config", return_value=mock_config),
+            patch("myao3.__main__.setup_logging"),
+            patch("myao3.__main__.HTTPServer") as mock_server_class,
+            patch("myao3.__main__.AgentLoop") as mock_agent_loop_class,
+            patch("myao3.__main__.EventQueue") as mock_event_queue_class,
+            patch("myao3.__main__.get_logger") as mock_get_logger,
+        ):
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            mock_server = AsyncMock()
+
+            # stop() hangs for 10 seconds (longer than timeout)
+            async def slow_stop() -> None:
+                await asyncio.sleep(10)
+
+            mock_server.stop = slow_stop
+            mock_server_class.return_value = mock_server
+
+            mock_agent_loop = MagicMock()
+            mock_agent_loop.process = AsyncMock()
+            mock_agent_loop_class.return_value = mock_agent_loop
+
+            mock_event_queue = MagicMock()
+
+            # Make dequeue block until cancelled
+            async def blocking_dequeue() -> MagicMock:
+                await asyncio.sleep(100)
+                return MagicMock()
+
+            mock_event_queue.dequeue = blocking_dequeue
+            mock_event_queue_class.return_value = mock_event_queue
+
+            async def run_with_shutdown() -> int:
+                task = asyncio.create_task(
+                    main_async(Path("config.yaml"), shutdown_timeout=0.1)
+                )
+                await asyncio.sleep(0.05)  # Give time for startup
+                # Send SIGTERM to trigger shutdown handler
+                os.kill(os.getpid(), signal_module.SIGTERM)
+                return await asyncio.wait_for(task, timeout=5.0)
+
+            exit_code = await run_with_shutdown()
+
+            # Exit code should still be 0 (shutdown delay is not a fatal error)
+            assert exit_code == 0
+            # Warning log should be output
+            mock_logger.warning.assert_called()
+            # Check that warning was called with timeout message
+            warning_calls = mock_logger.warning.call_args_list
+            timeout_warning_found = any(
+                "timed out" in str(call).lower() or "timeout" in str(call).lower()
+                for call in warning_calls
+            )
+            assert timeout_warning_found, (
+                f"Expected timeout warning, got: {warning_calls}"
+            )
