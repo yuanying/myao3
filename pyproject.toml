@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Event-driven autonomous bot that adapts to its environment"
 requires-python = ">=3.12"
 dependencies = [
-    "strands-agents>=0.1,<2.0",
+    "strands-agents[otel]>=0.1,<2.0",
     "litellm>=1.0,<2.0",
     "pydantic>=2.0,<3.0",
     "pyyaml>=6.0,<7.0",
@@ -12,6 +12,7 @@ dependencies = [
     "aiohttp>=3.9,<4.0",
     "ulid-py>=1.1,<2.0",
     "jinja2>=3.0,<4.0",
+    "python-dotenv>=1.0,<2.0",
 ]
 
 [build-system]

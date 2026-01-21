@@ -4,8 +4,8 @@ import asyncio
 
 import aiohttp
 import pytest
-import structlog
 from aiohttp.test_utils import TestClient
+from structlog.stdlib import BoundLogger, get_logger
 
 from myao3.config.models import ServerConfig
 from myao3.domain.entities.event import PingEvent
@@ -19,12 +19,12 @@ def event_queue() -> EventQueue:
 
 
 @pytest.fixture
-def logger() -> structlog.BoundLogger:
-    return structlog.get_logger()
+def logger() -> BoundLogger:
+    return get_logger()
 
 
 @pytest.fixture
-def http_server(event_queue: EventQueue, logger: structlog.BoundLogger) -> HTTPServer:
+def http_server(event_queue: EventQueue, logger: BoundLogger) -> HTTPServer:
     config = ServerConfig(host="127.0.0.1", port=8080)
     return HTTPServer(config=config, event_queue=event_queue, logger=logger)
 
@@ -139,7 +139,7 @@ class TestHTTPServer:
         assert isinstance(event, PingEvent)
 
     async def test_server_config_host_port(
-        self, event_queue: EventQueue, logger: structlog.BoundLogger
+        self, event_queue: EventQueue, logger: BoundLogger
     ) -> None:
         """TC-08-009: Server uses host and port from config."""
         config = ServerConfig(host="127.0.0.1", port=9000)
@@ -149,7 +149,7 @@ class TestHTTPServer:
         assert server.config.port == 9000
 
     async def test_server_start_stop(
-        self, event_queue: EventQueue, logger: structlog.BoundLogger
+        self, event_queue: EventQueue, logger: BoundLogger
     ) -> None:
         """TC-08-008: Server can be started and stopped."""
         config = ServerConfig(host="127.0.0.1", port=0)

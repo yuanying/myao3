@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from dotenv import load_dotenv
 
 from myao3.config.models import AppConfig
 
@@ -78,6 +79,11 @@ def load_config(path: Path) -> AppConfig:
         EnvVarNotFoundError: If an environment variable is not defined.
         ValidationError: If the configuration fails Pydantic validation.
     """
+    # Load .env file from the same directory as config.yaml
+    # Does not override existing environment variables
+    env_path = path.parent / ".env"
+    load_dotenv(env_path)
+
     if not path.exists():
         raise ConfigFileNotFoundError(f"Configuration file not found: {path}")
 
