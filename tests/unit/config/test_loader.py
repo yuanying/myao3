@@ -169,3 +169,68 @@ agent:
                 load_config(config_file)
 
             assert "UNDEFINED_VAR" in str(exc_info.value)
+
+
+class TestLoadConfigWithDotEnv:
+    """Tests for load_config with .env file loading."""
+
+    def test_loads_env_file_from_config_directory(self, tmp_path: Path) -> None:
+        """Load .env file from the same directory as config.yaml."""
+        # Create .env file
+        env_file = tmp_path / ".env"
+        env_file.write_text("DOTENV_TEST_VAR=dotenv-value\n")
+
+        # Create config.yaml that references the environment variable
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("""
+agent:
+  system_prompt: ${DOTENV_TEST_VAR}
+  llm:
+    model_id: "test/model"
+""")
+
+        # Ensure the variable is not already set
+        with patch.dict(os.environ, {}, clear=True):
+            # Clear any existing DOTENV_TEST_VAR
+            os.environ.pop("DOTENV_TEST_VAR", None)
+
+            config = load_config(config_file)
+
+        assert config.agent.system_prompt == "dotenv-value"
+
+    def test_no_error_when_env_file_missing(self, tmp_path: Path) -> None:
+        """No error when .env file does not exist."""
+        # Create config.yaml without .env file
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("""
+agent:
+  system_prompt: "Static prompt"
+  llm:
+    model_id: "test/model"
+""")
+
+        # Should not raise any error
+        config = load_config(config_file)
+        assert config.agent.system_prompt == "Static prompt"
+
+    def test_existing_env_vars_not_overridden(self, tmp_path: Path) -> None:
+        """Existing environment variables are not overridden by .env file."""
+        # Create .env file with a value
+        env_file = tmp_path / ".env"
+        env_file.write_text("EXISTING_VAR=dotenv-value\n")
+
+        # Create config.yaml that references the variable
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("""
+agent:
+  system_prompt: ${EXISTING_VAR}
+  llm:
+    model_id: "test/model"
+""")
+
+        # Set the existing environment variable
+        with patch.dict(os.environ, {"EXISTING_VAR": "original-value"}, clear=False):
+            config = load_config(config_file)
+
+        # Should use the original value, not the .env value
+        assert config.agent.system_prompt == "original-value"
