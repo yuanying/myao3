@@ -19,6 +19,7 @@ from myao3.config import (
 from myao3.domain.entities.event import Event
 from myao3.infrastructure import EventQueue
 from myao3.infrastructure.logging import get_logger, setup_logging
+from myao3.infrastructure.tracing import setup_tracing
 from myao3.presentation.http.server import HTTPServer
 
 # Shutdown timeout in seconds
@@ -152,7 +153,12 @@ async def main_async(
     logger = get_logger(__name__)
     logger.info("Starting myao3", config_path=str(config_path))
 
-    # 3. Initialize components
+    # 3. Initialize tracing (if OTEL endpoint is configured)
+    telemetry = setup_tracing()
+    if telemetry:
+        logger.info("Tracing enabled")
+
+    # 4. Initialize components
     event_queue = EventQueue()
     agent_loop = AgentLoop(config=config.agent, logger=get_logger("agent"))
     http_server = HTTPServer(
@@ -161,7 +167,7 @@ async def main_async(
         logger=get_logger("http_server"),
     )
 
-    # 4. Setup shutdown handling
+    # 5. Setup shutdown handling
     running = True
     shutdown_event = asyncio.Event()
 
@@ -179,11 +185,11 @@ async def main_async(
         loop.add_signal_handler(sig, signal_handler, sig)
 
     try:
-        # 5. Start HTTP server
+        # 6. Start HTTP server
         await http_server.start()
         logger.info("myao3 started successfully")
 
-        # 6. Run main loop
+        # 7. Run main loop
         await run_main_loop(
             event_queue=event_queue,
             agent_loop=agent_loop,
@@ -196,7 +202,7 @@ async def main_async(
         logger.info("Main loop cancelled")
 
     finally:
-        # 7. Shutdown
+        # 8. Shutdown
         logger.info("Shutting down")
         try:
             await asyncio.wait_for(http_server.stop(), timeout=shutdown_timeout)
