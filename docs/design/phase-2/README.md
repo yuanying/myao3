@@ -239,7 +239,6 @@ You may choose to:
 slack:
   bot_token: ${SLACK_BOT_TOKEN}
   app_token: ${SLACK_APP_TOKEN}
-  bot_id: ${SLACK_BOT_ID}
   response_delay: 480.0      # 非メンション時の基本遅延（秒）
   response_delay_jitter: 240.0  # ジッター範囲（秒）
   context_messages: 30        # LLMに渡すチャンネルメッセージ数
