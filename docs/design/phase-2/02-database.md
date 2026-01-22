@@ -188,10 +188,10 @@ SQLite ファイルパスの親ディレクトリが存在しない場合、自�
 
 ## 完了条件
 
-- [ ] sqlmodel, aiosqlite が依存関係に追加されている
-- [ ] Database クラスが実装されている
-- [ ] `initialize()` でテーブルが自動作成される
-- [ ] `get_session()` で AsyncSession が取得できる
-- [ ] `close()` でエンジンが破棄される
-- [ ] 親ディレクトリが自動作成される
-- [ ] 全てのテストケースがパスする
+- [x] sqlmodel, aiosqlite が依存関係に追加されている
+- [x] Database クラスが実装されている
+- [x] `initialize()` でテーブルが自動作成される
+- [x] `get_session()` で AsyncSession が取得できる
+- [x] `close()` でエンジンが破棄される
+- [x] 親ディレクトリが自動作成される
+- [x] 全てのテストケースがパスする
