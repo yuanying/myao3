@@ -234,3 +234,112 @@ agent:
 
         # Should use the original value, not the .env value
         assert config.agent.system_prompt == "original-value"
+
+
+class TestLoadConfigWithSlackAndDatabase:
+    """Tests for load_config with Slack and Database configurations."""
+
+    def test_env_var_expansion_in_slack_config(self, tmp_path: Path) -> None:
+        """TC-01-004: Environment variable expansion in slack config."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("""
+agent:
+  system_prompt: "Test"
+  llm:
+    model_id: "test/model"
+slack:
+  bot_token: ${SLACK_BOT_TOKEN}
+  app_token: ${SLACK_APP_TOKEN}
+""")
+
+        with patch.dict(
+            os.environ,
+            {"SLACK_BOT_TOKEN": "xoxb-test", "SLACK_APP_TOKEN": "xapp-test"},
+            clear=False,
+        ):
+            config = load_config(config_file)
+
+        assert config.slack is not None
+        assert config.slack.bot_token == "xoxb-test"
+        assert config.slack.app_token == "xapp-test"
+
+    def test_config_without_slack_section(self, tmp_path: Path) -> None:
+        """TC-01-005: Config without slack section loads successfully."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("""
+agent:
+  system_prompt: "Test"
+  llm:
+    model_id: "test/model"
+""")
+
+        config = load_config(config_file)
+
+        assert config.slack is None
+
+    def test_config_without_database_section(self, tmp_path: Path) -> None:
+        """TC-01-006: Config without database section loads successfully."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("""
+agent:
+  system_prompt: "Test"
+  llm:
+    model_id: "test/model"
+""")
+
+        config = load_config(config_file)
+
+        assert config.database is None
+
+    def test_full_config_with_slack_and_database(self, tmp_path: Path) -> None:
+        """TC-01-007: Full config with slack and database sections."""
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("""
+agent:
+  system_prompt: "You are a helpful assistant."
+  llm:
+    model_id: "anthropic/claude-sonnet-4-20250514"
+server:
+  host: "127.0.0.1"
+  port: 9000
+logging:
+  level: DEBUG
+  format: text
+slack:
+  bot_token: ${SLACK_BOT_TOKEN}
+  app_token: ${SLACK_APP_TOKEN}
+  response_delay: 600.0
+  response_delay_jitter: 300.0
+  context_messages: 50
+  thread_messages: 20
+database:
+  url: "sqlite+aiosqlite:///data/myao3.db"
+""")
+
+        with patch.dict(
+            os.environ,
+            {"SLACK_BOT_TOKEN": "xoxb-test", "SLACK_APP_TOKEN": "xapp-test"},
+            clear=False,
+        ):
+            config = load_config(config_file)
+
+        # Verify all fields are correctly loaded
+        assert config.agent.system_prompt == "You are a helpful assistant."
+        assert config.agent.llm.model_id == "anthropic/claude-sonnet-4-20250514"
+        assert config.server.host == "127.0.0.1"
+        assert config.server.port == 9000
+        assert config.logging.level == "DEBUG"
+        assert config.logging.format == "text"
+
+        # Slack config
+        assert config.slack is not None
+        assert config.slack.bot_token == "xoxb-test"
+        assert config.slack.app_token == "xapp-test"
+        assert config.slack.response_delay == 600.0
+        assert config.slack.response_delay_jitter == 300.0
+        assert config.slack.context_messages == 50
+        assert config.slack.thread_messages == 20
+
+        # Database config
+        assert config.database is not None
+        assert config.database.url == "sqlite+aiosqlite:///data/myao3.db"

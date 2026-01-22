@@ -10,9 +10,11 @@ from myao3.config.loader import (
 from myao3.config.models import (
     AgentConfig,
     AppConfig,
+    DatabaseConfig,
     LLMConfig,
     LoggingConfig,
     ServerConfig,
+    SlackConfig,
 )
 
 __all__ = [
@@ -26,7 +28,9 @@ __all__ = [
     # Models
     "AgentConfig",
     "AppConfig",
+    "DatabaseConfig",
     "LLMConfig",
     "LoggingConfig",
     "ServerConfig",
+    "SlackConfig",
 ]

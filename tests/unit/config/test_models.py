@@ -6,10 +6,82 @@ from pydantic import ValidationError
 from myao3.config.models import (
     AgentConfig,
     AppConfig,
+    DatabaseConfig,
     LLMConfig,
     LoggingConfig,
     ServerConfig,
+    SlackConfig,
 )
+
+
+class TestSlackConfig:
+    """Tests for SlackConfig model."""
+
+    def test_missing_bot_token_raises_error(self) -> None:
+        """TC-01-001: SlackConfig without bot_token raises ValidationError."""
+        with pytest.raises(ValidationError) as exc_info:
+            SlackConfig(app_token="xapp-test")  # type: ignore[call-arg]
+
+        errors = exc_info.value.errors()
+        assert any(e["loc"] == ("bot_token",) for e in errors)
+        assert any(e["type"] == "missing" for e in errors)
+
+    def test_missing_app_token_raises_error(self) -> None:
+        """TC-01-001: SlackConfig without app_token raises ValidationError."""
+        with pytest.raises(ValidationError) as exc_info:
+            SlackConfig(bot_token="xoxb-test")  # type: ignore[call-arg]
+
+        errors = exc_info.value.errors()
+        assert any(e["loc"] == ("app_token",) for e in errors)
+        assert any(e["type"] == "missing" for e in errors)
+
+    def test_default_values(self) -> None:
+        """TC-01-002: SlackConfig with only required fields has correct defaults."""
+        config = SlackConfig(bot_token="xoxb-test", app_token="xapp-test")
+
+        assert config.bot_token == "xoxb-test"
+        assert config.app_token == "xapp-test"
+        assert config.response_delay == 480.0
+        assert config.response_delay_jitter == 240.0
+        assert config.context_messages == 30
+        assert config.thread_messages == 10
+
+    def test_custom_values(self) -> None:
+        """SlackConfig with custom values."""
+        config = SlackConfig(
+            bot_token="xoxb-custom",
+            app_token="xapp-custom",
+            response_delay=600.0,
+            response_delay_jitter=300.0,
+            context_messages=50,
+            thread_messages=20,
+        )
+
+        assert config.bot_token == "xoxb-custom"
+        assert config.app_token == "xapp-custom"
+        assert config.response_delay == 600.0
+        assert config.response_delay_jitter == 300.0
+        assert config.context_messages == 50
+        assert config.thread_messages == 20
+
+
+class TestDatabaseConfig:
+    """Tests for DatabaseConfig model."""
+
+    def test_missing_url_raises_error(self) -> None:
+        """TC-01-003: DatabaseConfig without url raises ValidationError."""
+        with pytest.raises(ValidationError) as exc_info:
+            DatabaseConfig()  # type: ignore[call-arg]
+
+        errors = exc_info.value.errors()
+        assert any(e["loc"] == ("url",) for e in errors)
+        assert any(e["type"] == "missing" for e in errors)
+
+    def test_valid_url(self) -> None:
+        """DatabaseConfig with valid url."""
+        config = DatabaseConfig(url="sqlite+aiosqlite:///data/myao3.db")
+
+        assert config.url == "sqlite+aiosqlite:///data/myao3.db"
 
 
 class TestLLMConfig:
@@ -188,3 +260,74 @@ class TestAppConfig:
         errors = exc_info.value.errors()
         assert any(e["loc"] == ("agent",) for e in errors)
         assert any(e["type"] == "missing" for e in errors)
+
+    def test_slack_none_by_default(self) -> None:
+        """TC-01-005: AppConfig without slack section has slack=None."""
+        config = AppConfig(
+            agent=AgentConfig(
+                system_prompt="Test",
+                llm=LLMConfig(model_id="test/model"),
+            )
+        )
+
+        assert config.slack is None
+
+    def test_database_none_by_default(self) -> None:
+        """TC-01-006: AppConfig without database section has database=None."""
+        config = AppConfig(
+            agent=AgentConfig(
+                system_prompt="Test",
+                llm=LLMConfig(model_id="test/model"),
+            )
+        )
+
+        assert config.database is None
+
+    def test_with_slack_config(self) -> None:
+        """AppConfig with slack configuration."""
+        config = AppConfig(
+            agent=AgentConfig(
+                system_prompt="Test",
+                llm=LLMConfig(model_id="test/model"),
+            ),
+            slack=SlackConfig(bot_token="xoxb-test", app_token="xapp-test"),
+        )
+
+        assert config.slack is not None
+        assert config.slack.bot_token == "xoxb-test"
+        assert config.slack.app_token == "xapp-test"
+
+    def test_with_database_config(self) -> None:
+        """AppConfig with database configuration."""
+        config = AppConfig(
+            agent=AgentConfig(
+                system_prompt="Test",
+                llm=LLMConfig(model_id="test/model"),
+            ),
+            database=DatabaseConfig(url="sqlite+aiosqlite:///data/myao3.db"),
+        )
+
+        assert config.database is not None
+        assert config.database.url == "sqlite+aiosqlite:///data/myao3.db"
+
+    def test_full_config_with_slack_and_database(self) -> None:
+        """TC-01-007: AppConfig with all fields including slack and database."""
+        config = AppConfig(
+            agent=AgentConfig(
+                system_prompt="You are a helpful assistant.",
+                llm=LLMConfig(
+                    model_id="anthropic/claude-sonnet-4-20250514",
+                    params={"temperature": 0.5},
+                ),
+            ),
+            server=ServerConfig(host="127.0.0.1", port=9000),
+            logging=LoggingConfig(level="DEBUG", format="text"),
+            slack=SlackConfig(bot_token="xoxb-test", app_token="xapp-test"),
+            database=DatabaseConfig(url="sqlite+aiosqlite:///data/myao3.db"),
+        )
+
+        assert config.agent.system_prompt == "You are a helpful assistant."
+        assert config.slack is not None
+        assert config.slack.bot_token == "xoxb-test"
+        assert config.database is not None
+        assert config.database.url == "sqlite+aiosqlite:///data/myao3.db"
