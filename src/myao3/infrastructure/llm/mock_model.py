@@ -68,6 +68,7 @@ class MockModel(Model):
         self,
         output_model: type[T],
         prompt: Messages,
+        system_prompt: str | None = None,
         **kwargs: Any,
     ) -> AsyncGenerator[dict[str, T | Any], None]:
         """Return structured output (not implemented for mock).
@@ -75,6 +76,7 @@ class MockModel(Model):
         Args:
             output_model: The output model type.
             prompt: The prompt messages.
+            system_prompt: System prompt (unused in mock).
             **kwargs: Additional keyword arguments.
 
         Yields:
