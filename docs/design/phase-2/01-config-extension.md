@@ -165,10 +165,10 @@ database:
 
 ## 完了条件
 
-- [ ] SlackConfig クラスが定義されている
-- [ ] DatabaseConfig クラスが定義されている
-- [ ] AppConfig に slack, database フィールドが追加されている
-- [ ] config.yaml.example が更新されている
-- [ ] 環境変数展開が正しく動作する
-- [ ] オプショナルな設定（slack, database）が未設定でも起動できる
-- [ ] 全てのテストケースがパスする
+- [x] SlackConfig クラスが定義されている
+- [x] DatabaseConfig クラスが定義されている
+- [x] AppConfig に slack, database フィールドが追加されている
+- [x] config.yaml.example が更新されている
+- [x] 環境変数展開が正しく動作する
+- [x] オプショナルな設定（slack, database）が未設定でも起動できる
+- [x] 全てのテストケースがパスする
