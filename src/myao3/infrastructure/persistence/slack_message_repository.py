@@ -149,17 +149,15 @@ class SqliteSlackMessageRepository:
             return
 
         async with self._database.get_session() as session:
-            # Use parameterized query for safety
-            placeholders = ", ".join([f":id{i}" for i in range(len(message_ids))])
-            params = {f"id{i}": mid for i, mid in enumerate(message_ids)}
+            # Use SQLAlchemy's update with in_() for safe bulk update
+            from sqlalchemy import update
 
-            await session.execute(
-                text(
-                    f"UPDATE slack_messages SET is_read = 1 "
-                    f"WHERE id IN ({placeholders})"
-                ),
-                params,
+            stmt = (
+                update(SlackMessage)
+                .where(SlackMessage.id.in_(message_ids))
+                .values(is_read=True)
             )
+            await session.execute(stmt)
 
     async def increment_reply_count(self, message_id: str) -> bool:
         """Increment the reply count of a message.

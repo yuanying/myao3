@@ -126,7 +126,7 @@ class TestUpsertMessage:
         assert saved.text == "Updated"
         # created_at は最初の値を維持
         # SQLite から取得した datetime は offset-naive になるため、
-        # replace で比較用に変換
+        # replace で tzinfo を削除して比較用に合わせる（タイムゾーン変換ではない）
         original_naive = original_created_at.replace(tzinfo=None)
         assert abs((saved.created_at - original_naive).total_seconds()) < 1
 
