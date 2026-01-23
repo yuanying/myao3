@@ -154,7 +154,7 @@ class SqliteSlackMessageRepository:
 
             stmt = (
                 update(SlackMessage)
-                .where(SlackMessage.id.in_(message_ids))
+                .where(SlackMessage.id.in_(message_ids))  # type: ignore[union-attr]
                 .values(is_read=True)
             )
             await session.execute(stmt)
