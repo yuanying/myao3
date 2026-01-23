@@ -275,15 +275,15 @@ WHERE id = :message_id
 
 ## 完了条件
 
-- [ ] SlackMessage エンティティが SQLModel テーブルとして定義されている
-- [ ] `reply_count` フィールドが追加されている
-- [ ] SlackMessageRepository Protocol が定義されている
-- [ ] SqliteSlackMessageRepository が実装されている
-- [ ] `save()` が upsert として動作する
-- [ ] `get_by_id()` が単一メッセージを取得する
-- [ ] `get_by_channel()` がスレッド返信を除外して取得する
-- [ ] `get_thread()` が親メッセージを含めて取得する
-- [ ] `mark_as_read()` がバルク更新する
-- [ ] `increment_reply_count()` がアトミックに更新する
-- [ ] 適切なインデックスが設定されている
-- [ ] 全てのテストケースがパスする
+- [x] SlackMessage エンティティが SQLModel テーブルとして定義されている
+- [x] `reply_count` フィールドが追加されている
+- [x] SlackMessageRepository Protocol が定義されている
+- [x] SqliteSlackMessageRepository が実装されている
+- [x] `save()` が upsert として動作する
+- [x] `get_by_id()` が単一メッセージを取得する
+- [x] `get_by_channel()` がスレッド返信を除外して取得する
+- [x] `get_thread()` が親メッセージを含めて取得する
+- [x] `mark_as_read()` がバルク更新する
+- [x] `increment_reply_count()` がアトミックに更新する
+- [x] 適切なインデックスが設定されている
+- [x] 全てのテストケースがパスする
