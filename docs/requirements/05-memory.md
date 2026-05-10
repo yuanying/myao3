@@ -16,11 +16,15 @@
 | Short-term Memory | 数時間〜数日 | 制限あり | 最近の会話、一時的な文脈 | Strands Session（会話単位） |
 | Long-term Memory | 永続 | 制限あり | 個人の特徴、重要な出来事、学習内容 | LLM Wiki（ファイルシステム） |
 
+外部プラットフォームの生メッセージ履歴は三層記憶とは別に、Message Store（SQLite）へ保存する。Message Storeはプラットフォーム別の専用テーブルで構成し、Phase 3ではSlack用の `SlackMessage` テーブルを持つ。これは外部Event処理時にSessionへ未反映のメッセージを復元するための同期バッファであり、Long-term Memoryのcanonical sourceではない。人やトピックに関する長期的な知識は、従来どおり日次整理を経てWikiへ反映する。
+
 **Session → Long-term Memory 2段階方式**:
 
 ```
 ループ内（随時）
   → 会話単位の Strands Session にメッセージ、tool call、tool result を保存
+  → 外部プラットフォーム由来の生メッセージは Message Store の専用テーブルに保存
+  → 外部Event処理時に、Session未収録分をMessage Storeから読み込んで入力を組み立て
 
 毎日夜中（日次整理）
   → 前日分の Session を読み、notes/YYYY-MM-DD.md に要約・重要事項を保存
@@ -226,7 +230,7 @@ My personality and growth log → [self](self.md)
 
 - ユーザーが「他の人に言わないで」等と依頼した場合、その旨をメモリに記載
 - LLMはメモリの文脈から秘密情報を判断し、他のユーザーとの会話で出力しない
-- **管理者は Session ファイルと Wiki ファイルを通じて全ての記憶を閲覧可能**
+- **管理者は Session ファイル、Wiki ファイル、Message Storeを通じて全ての記憶を閲覧可能**
 
 **管理者の権限**:
 

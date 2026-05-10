@@ -12,35 +12,36 @@
 
 ```
 1. イベント受信
-2. コンテキスト構築
+2. イベント由来の外部メッセージを保存
+   - Slack MESSAGEならSlackMessageテーブルへupsert
+3. コンテキスト構築
    - system_prompt = Markdownプロンプト群 + Short-term要約 + 実行時コンテキスト
    - tools = 利用可能なツール一覧
    - query_prompt = イベントタイプに応じたクエリ生成
-3. 会話単位のSessionを取得または作成
-4. Agent生成・実行
-5. Sessionへ会話履歴を保存
-6. 結果をログに記録
-7. 完了
+4. 会話単位のSessionを取得または作成
+5. Sessionに含まれていない外部メッセージをDBから読み込み、今回の入力メッセージを組み立てる
+6. Agent生成・実行
+7. Sessionへ会話履歴を保存
+8. 結果をログに記録
+9. 完了
 ```
 
 **実装イメージ**:
 
 ```python
 async def process(event: Event) -> None:
-    # 1. system_prompt構築
+    # 1. Slack MESSAGEなど、外部プラットフォーム由来の生メッセージを保存
+    await persist_external_messages(event)
+
+    # 2. system_prompt構築
     #    - Markdownプロンプト群: prompts/*.md から固定順で読み込み
     #    - Dynamic Notes: prompts/dynamic/*.md から読み込み
     #    - 実行時コンテキスト: workspace, timezone, event metadata など
     #    - 記憶: Short-term は要約のみ、Long-term は Wiki ツールで段階的取得
     system_prompt = build_system_prompt(event)
     
-    # 2. ツール一覧
+    # 3. ツール一覧
     tools = get_available_tools()
-    
-    # 3. イベントタイプごとのクエリ生成
-    #    - Slack MESSAGEならメッセージ内容を含むクエリ
-    #    - PINGなら単純な起動通知
-    query_prompt = build_query_prompt(event)
     
     # 4. 会話単位のSession取得
     #    - Slack channel: slack:{workspace_id}:channel:{channel_id}
@@ -48,7 +49,17 @@ async def process(event: Event) -> None:
     session_id = build_session_id(event)
     session_manager = get_session_manager(session_id)
 
-    # 5. Agent生成（Agentインスタンスは処理ごとに作成し、会話履歴はSessionから復元）
+    # 5. Sessionに未収録の外部メッセージをDBから復元
+    #    - Slack MESSAGEならSlackMessageテーブルからchannel/threadの未収録分を読む
+    #    - 復元したメッセージと今回のイベントを合わせてAgent入力を作る
+    external_context = await load_unsynced_external_messages(event, session_id)
+
+    # 6. イベントタイプごとのクエリ生成
+    #    - Slack MESSAGEなら未収録メッセージと新着メッセージ内容を含むクエリ
+    #    - PINGなら単純な起動通知
+    query_prompt = build_query_prompt(event, external_context)
+
+    # 7. Agent生成（Agentインスタンスは処理ごとに作成し、会話履歴はSessionから復元）
     agent = Agent(
         model=model_id,
         system_prompt=system_prompt,
@@ -56,10 +67,10 @@ async def process(event: Event) -> None:
         session_manager=session_manager,
     )
     
-    # 6. 実行（toolのstateを渡す）
+    # 8. 実行（toolのstateを渡す）
     result = await agent.invoke_async(query_prompt, **invocation_state)
     
-    # 7. ログ記録
+    # 9. ログ記録
     logger.info(f"Event {event.id} processed", result=result)
 ```
 
@@ -70,6 +81,7 @@ async def process(event: Event) -> None:
 | Agent生成 | 処理ごとにインスタンス生成 | モデル・ツール・実行時コンテキストをイベントごとに構築するため |
 | Session Manager | 会話単位で使用 | Slack channel やチャット会話ごとに履歴を継続するため |
 | Session ID | source + conversation scope | 複数Slack Workspaceや複数チャットを混同しないため |
+| Message Store | SQLModel + aiosqlite で保持 | 外部プラットフォームで観測した生メッセージをSessionとは独立して復元できるようにするため |
 | 記憶の注入 | Long-term はツール呼び出しで段階的取得 | コンテキストウィンドウ節約、LLMが必要な情報を自律判断 |
 
 **Session ID の例**:
@@ -81,6 +93,47 @@ async def process(event: Event) -> None:
 | Email thread | `email:{thread_id}` |
 
 Slack の `channel_id` や `user_id` は workspace 内で解釈する。複数の Slack Workspace に属する場合があるため、Slack由来の session_id と記憶メモには必ず `workspace_id` を含める。SlackではSession粒度をchannelに固定し、スレッド内の会話も channel Session に含める。
+
+**Message Store と Session の関係**:
+
+Message Storeは、外部プラットフォームから受信したメッセージのcanonical sourceとしてSQLite DBに保持する。Strands SessionはAgentとの会話履歴を保持するが、外部チャンネル上でAgentがまだ処理していない人間同士の発言が含まれているとは限らない。そのため、外部Eventを処理するたびにSessionへ保存済みの最後の外部メッセージ位置を確認し、それ以降のメッセージをDBから読み込んでAgent入力を組み立てる。
+
+Message Storeは単一の汎用メッセージテーブルではなく、プラットフォームごとの専用テーブルで構成する。Slackでは `SlackMessage`、Discord連携時は `DiscordMessage`、Email連携時は `EmailMessage` のように、それぞれのID体系とpayloadを保ったモデルを追加する。Agent Loop側はプラットフォーム別Repositoryを通じて未収録メッセージを読み込む。
+
+```python
+from sqlalchemy import Column, JSON
+from sqlmodel import Field, SQLModel
+
+class SlackMessage(SQLModel, table=True):
+    workspace_id: str = Field(primary_key=True)
+    channel_id: str = Field(primary_key=True)
+    message_ts: str = Field(primary_key=True)
+    thread_ts: str | None = None
+    user_id: str
+    text: str
+    event_ts: str
+    raw_event: dict = Field(sa_column=Column(JSON))
+    inserted_at: datetime
+
+class SessionExternalCursor(SQLModel, table=True):
+    session_id: str = Field(primary_key=True)
+    source: str = Field(primary_key=True)  # "slack"
+    last_message_id: str | None = None
+    updated_at: datetime
+```
+
+**Slack MESSAGE処理時の復元フロー**:
+
+```
+1. Slack Eventを受信
+2. SlackMessageをupsert
+3. session_id = slack:{workspace_id}:channel:{channel_id} を解決
+4. SessionExternalCursor.last_message_id より新しいSlackMessageをDBから取得
+5. 取得した未収録メッセージを時系列に整形し、query_promptに含める
+6. Agent実行後、SessionExternalCursor.last_message_id を処理済みの最新message_tsへ更新
+```
+
+この復元はSlackメッセージ本文をAgent入力に含めるための処理であり、DB内の全履歴をsystem_promptへ直接注入しない。読み込み件数と文字数には上限を設け、超過時は古い順に要約または切り捨てを行う。
 
 **system_prompt の構成**:
 
@@ -157,25 +210,27 @@ prompts/
 **build_query_prompt の構造**:
 
 ```python
-def build_query_prompt(event: Event) -> str:
+def build_query_prompt(event: Event, external_context: dict | None = None) -> str:
     """イベントタイプに応じたクエリを生成する"""
     handler = get_handler(event.type)
-    return handler.build_query(event)
+    return handler.build_query(event, external_context)
 
 # ハンドラの例
 class PingEventHandler:
-    def build_query(self, event: Event) -> str:
+    def build_query(self, event: Event, external_context: dict | None = None) -> str:
         return "System ping received. Check your status and decide if any action is needed."
 
 class SlackMessageEventHandler:
-    def build_query(self, event: Event) -> str:
+    def build_query(self, event: Event, external_context: dict | None = None) -> str:
         payload = event.payload
+        recent_messages = external_context.get("messages", []) if external_context else []
         return f"""
-New message received:
+New Slack messages received:
 - Workspace: {payload['workspace_name']} ({payload['workspace_id']})
-- From: {payload['user_name']} ({payload['user_id']})
 - Channel: {payload['channel_name']} ({payload['channel_id']})
-- Text: {payload['text']}
+
+Messages not yet reflected in this Session:
+{format_slack_messages(recent_messages)}
 
 Respond appropriately based on the context and your memory of this person.
 """

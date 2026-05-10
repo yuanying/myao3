@@ -17,5 +17,6 @@
 | 0.13.0 | 2026-05-10 | Agent Loop を会話単位の Strands Session 使用に変更し、DB/SQLite を技術スタックから削除。Slack は workspace_id を含む channel Session 単位で管理 |
 | 0.14.0 | 2026-05-10 | 要求仕様書を docs/requirements/ に意味単位で分割し、requirements.md を入口ページに変更 |
 | 0.15.0 | 2026-05-10 | Slack連携前に CopilotKit 独自UIで記憶とコミュニケーションを実装する Phase 2 を追加し、Slack連携を Phase 3 に移動 |
+| 0.16.0 | 2026-05-10 | 外部メッセージをSQLModel / aiosqliteのMessage Storeへ保存し、Slack Event処理時にSession未収録メッセージをSlackMessageテーブルから復元して入力を組み立てる方式を追加 |
 
 ---

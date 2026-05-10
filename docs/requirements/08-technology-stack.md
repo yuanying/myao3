@@ -10,6 +10,8 @@
 | LLM Gateway | LiteLLM | 複数LLMプロバイダ対応 |
 | Frontend | React / TypeScript | 独自UI実装 |
 | Agentic UI | CopilotKit | チャットUI、Generative UI、Agent接続 |
+| ORM | SQLModel | 外部メッセージ復元用DBモデル |
+| SQLite async driver | aiosqlite | Message Storeの非同期アクセス |
 
 ### 5.2 インフラ
 
@@ -18,6 +20,7 @@
 | コンテナ | Docker | アプリケーションパッケージング |
 | オーケストレーション | Kubernetes | ホームクラスタにデプロイ |
 | ストレージ (Session) | ファイルシステム (Longhorn PVC) | 会話単位の Strands Session 永続化 |
+| ストレージ (Message Store) | SQLite (Longhorn PVC) | 外部Eventで受信した生メッセージの永続化。プラットフォーム別テーブルを持つ |
 | ストレージ (Wiki) | ファイルシステム (Longhorn PVC) | Long-term Memory（Wiki）の永続化 |
 | ストレージ (Prompt) | ファイルシステム (Longhorn PVC) | Markdownプロンプト原本の永続化 |
 
