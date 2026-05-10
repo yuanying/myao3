@@ -48,7 +48,9 @@
 
 **スコープ**:
 - [ ] Slack連携（メッセージ受信）
+- [ ] Message Store（SQLModel / aiosqlite、SlackMessageテーブル）
 - [ ] Slack channel 単位の Strands Session
+- [ ] Session未収録SlackメッセージのDB復元
 - [ ] メッセージ送信ツール
 - [ ] リアクションツール
 - [ ] Dockerイメージ作成
@@ -56,6 +58,8 @@
 
 **完了条件**:
 - Slackでメンションされると、文脈を踏まえた返答ができる
+- Slack Event受信時にメッセージがDBへ冪等に保存される
+- Agent処理時にSession未収録のSlackメッセージがDBから読み込まれ、入力メッセージに含まれる
 - 同じSlack channelやチャット会話のSessionを継続し、文脈を踏まえて返答できる
 - Kubernetesクラスタ上で稼働している
 

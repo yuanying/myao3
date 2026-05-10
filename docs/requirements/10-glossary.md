@@ -14,6 +14,8 @@
 | 自己発火 | ボット自身が `emit_event` ツールで新しいイベントを生成すること |
 | invocation_state | strands-agentsのツール間で共有される状態オブジェクト |
 | CopilotKit UI | Slack連携前に記憶とコミュニケーションを検証するための独自チャットUI |
+| Message Store | 外部Eventで受信した生メッセージをSQLModel / aiosqliteで保存するSQLite DB。SlackMessageなどプラットフォーム別テーブルで構成し、Session未収録メッセージの復元に使う |
+| SessionExternalCursor | 外部メッセージソースごとに、Sessionへ反映済みの最後のメッセージ位置を保持するカーソル |
 | system_prompt | Markdownプロンプト群 + Dynamic Notes + Short-term要約 + 実行時コンテキストを固定順で合成したLLMへの指示 |
 | query_prompt | イベントタイプに応じて生成されるユーザークエリ |
 | LLM Wiki | ファイルシステム上の Markdown ファイル群で構成される Long-term Memory |

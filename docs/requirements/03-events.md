@@ -58,6 +58,40 @@ class SlackChannelUpdateEvent(Event):
         return f"slack_ch_update:{self.payload['channel_id']}"
 ```
 
+#### FR-EVENT-005: 外部メッセージ永続化
+
+| 項目 | 内容 |
+|------|------|
+| 概要 | 外部プラットフォームで受信したメッセージを、Agent Loop実行前にDBへ保存する |
+| 優先度 | 高 |
+| フェーズ | Phase 3 |
+
+Slackなど外部プラットフォームのメッセージイベントは、Strands Sessionへ直接依存させず、まずSQLite DBへ保存する。SessionはAgentとの会話履歴、tool call、tool resultを保持するためのものであり、外部プラットフォームで観測した生メッセージのcanonical sourceにはしない。
+
+DBは単一の汎用メッセージテーブルに正規化しない。Slack、Discord、Email、UIなど、プラットフォームごとにイベント構造やID体系が異なるため、各プラットフォーム専用のテーブルを持つ。Phase 3では `SlackMessage` テーブルを実装対象とし、他プラットフォーム連携時に `DiscordMessage`、`EmailMessage` などを追加する。
+
+**SlackMessage の保存対象**:
+
+| 項目 | 説明 |
+|------|------|
+| workspace_id | Slack workspace/team ID |
+| channel_id | Slack channel ID |
+| thread_ts | Slack thread timestamp。スレッド外メッセージはNULL |
+| message_ts | Slack message timestamp。workspace + channel + tsで一意 |
+| user_id | 発言者のSlack user ID |
+| text | Slack message text |
+| event_ts | Slack Eventのtimestamp |
+| raw_event | Slack Event payload全体 |
+| inserted_at | DB保存時刻 |
+
+**制約**:
+
+- `workspace_id`, `channel_id`, `message_ts` の組をユニークキーにする。
+- Slackの再送やEvent重複はDBのupsertで冪等に扱う。
+- message_deleted など、本文を再構築できなくなるイベントは将来拡張として扱い、Phase 3では受信済み本文の保持を優先する。
+- このDBは外部メッセージ復元用であり、Person MemoryやLong-term Memoryのcanonical sourceにはしない。
+- プラットフォーム横断の抽象テーブルは作らず、必要な共通処理はRepository層や読み込みインターフェースで吸収する。
+
 #### FR-EVENT-003: イベントキュー
 
 | 項目 | 内容 |
