@@ -382,7 +382,7 @@ def emit_event(
 ```
 1. イベント受信
 2. コンテキスト構築
-   - system_prompt = Markdownプロンプト群 + 動的メモ + 実行時コンテキスト
+   - system_prompt = Markdownプロンプト群 + Short-term要約 + 実行時コンテキスト
    - tools = 利用可能なツール一覧
    - query_prompt = イベントタイプに応じたクエリ生成
 3. Agent生成・実行
@@ -396,7 +396,7 @@ def emit_event(
 async def process(event: Event) -> None:
     # 1. system_prompt構築
     #    - Markdownプロンプト群: prompts/*.md から固定順で読み込み
-    #    - 動的メモ: DBから有効な改善メモのみ読み込み
+    #    - Dynamic Notes: prompts/dynamic/*.md から読み込み
     #    - 実行時コンテキスト: workspace, timezone, event metadata など
     #    - 記憶: Short-term は要約のみ、Long-term は Wiki ツールで段階的取得
     system_prompt = build_system_prompt(event)
@@ -433,7 +433,7 @@ async def process(event: Event) -> None:
 
 **system_prompt の構成**:
 
-system_prompt は、管理者が直接読めて編集できる Markdown ファイル群を固定順で合成して生成する。DBに巨大な完成済みプロンプト全文を保存するのではなく、原本はプレーンテキスト、DBは自己改善による差分・履歴・有効/無効状態を保持する。
+system_prompt は、管理者が直接読めて編集できる Markdown ファイル群を固定順で合成して生成する。DBに巨大な完成済みプロンプト全文や有効/無効付きのプロンプト断片を保存しない。プロンプトの原本は常にプレーンテキストファイルとする。
 
 ```
 ┌─────────────────────────────────────────┐
@@ -478,6 +478,8 @@ prompts/
   safety.md        # 権限、プライバシー、危険操作、過剰介入防止
   self_update.md   # 自己改善の対象、手順、制限
   runtime.md.tmpl  # 実行時コンテキストのテンプレート
+  dynamic/
+    behavior_notes.md  # 自己改善で追記される短い行動メモ
 ```
 
 **合成ルール**:
@@ -486,7 +488,8 @@ prompts/
 |------|--------|------|
 | セクション順 | 固定 | モデル入力を安定させ、差分確認を容易にする |
 | 原本 | Markdownファイル | 管理者が直接読めて編集できる |
-| DB保存 | 差分・履歴・有効/無効フラグのみ | プロンプト全文の劣化や消失を避ける |
+| 自己改善 | 許可されたMarkdownファイルを直接変更 | プレーンテキストを唯一の原本にする |
+| 変更履歴 | 監査ログに記録 | 後から理由と差分を確認できるようにする |
 | Long-term Memory | system_promptに一括注入しない | コンテキストウィンドウ節約、必要時取得 |
 | Short-term Memory | 直近文脈の要約のみ注入 | 会話連続性とサイズ制御の両立 |
 | Skills/専門手順 | 一覧のみ注入し、本文は必要時に読む | base promptを小さく保つ |
@@ -496,7 +499,7 @@ prompts/
 
 | mode | 用途 | 含める内容 |
 |------|------|------------|
-| `full` | 通常のAgent Loop | 全セクション、動的メモ、Short-term要約 |
+| `full` | 通常のAgent Loop | 全セクション、Dynamic Notes、Short-term要約 |
 | `minimal` | sub-agent、単発の補助処理 | Core、Tooling、Safety、Runtime Contextのみ |
 | `none` | デバッグ、特殊用途 | 最小限のidentity行のみ |
 
@@ -890,7 +893,7 @@ My personality and growth log → [self](self.md)
 
 ```python
 class SelfImprovement(BaseModel):
-    """ボットによるプロンプト改善の記録"""
+    """ボットによるプロンプト改善の監査ログ"""
     id: str
     target_file: Literal[
         "prompts/soul.md",
@@ -903,16 +906,16 @@ class SelfImprovement(BaseModel):
     new_excerpt: str
     reason: str                      # なぜこの変更が必要か
     trigger_event_id: Optional[str]  # きっかけとなったイベント
-    enabled: bool                    # falseにすると合成対象から除外
     applied_at: datetime
 ```
 
 **運用フロー**:
 
 1. ボットが改善対象ファイルと変更内容を限定して改善を実行
-2. 変更内容がログに出力される
-3. 管理者は必要に応じてログを確認
-4. 問題のある改善は管理者がDBの `enabled` を false にする、またはMarkdownファイルを直接編集して介入
+2. 許可された Markdown ファイルへ変更を直接適用する
+3. 変更内容が監査ログに出力される
+4. 管理者は必要に応じてログを確認
+5. 問題のある改善は管理者が Markdown ファイルを直接編集する、またはファイル履歴から戻す
 
 ```
 # ログ出力例
@@ -930,7 +933,7 @@ class SelfImprovement(BaseModel):
 | 変更対象の限定 | 自己改善ツールは許可されたMarkdownファイルだけを変更できる |
 | 重要指示の保護 | Core、Tooling、Safetyは管理者のみが変更できる |
 | 差分記録 | 変更理由、差分、きっかけイベントを必ず保存する |
-| 無効化可能 | 各改善は後から無効化でき、無効化された改善はprompt合成に使わない |
+| ロールバック | 問題のある改善はMarkdownファイルの再編集またはファイル履歴で戻す |
 
 **ツール定義**:
 
@@ -953,7 +956,7 @@ def propose_prompt_patch(
         patch: A unified diff or equivalent small patch
         reason: Explanation of why this change is needed
     """
-    # 実装: patchを検証し、許可されたファイルにのみ適用し、履歴を記録
+    # 実装: patchを検証し、許可されたファイルにのみ適用し、監査ログを記録
     apply_prompt_patch(target_file, patch, reason)
     return f"Prompt patch applied to {target_file}. Reason: {reason}"
 
@@ -967,14 +970,14 @@ def append_behavior_note(
     """Append a short dynamic behavior note.
 
     Use this when a full patch is unnecessary and a small behavioral reminder is enough.
-    Notes are stored separately and injected in the Dynamic Notes section.
+    Notes are appended to prompts/dynamic/behavior_notes.md and injected in the Dynamic Notes section.
 
     Args:
         category: The behavior category
         note: A concise behavior note
         reason: Explanation of why this note is needed
     """
-    # 実装: prompts/dynamic/behavior_notes.md相当の管理領域へ追記し、履歴を記録
+    # 実装: prompts/dynamic/behavior_notes.mdへ追記し、監査ログを記録
     append_dynamic_note(category, note, reason)
     return f"Behavior note appended. Reason: {reason}"
 ```
@@ -1216,7 +1219,7 @@ async def call_llm(config: LLMConfig, messages: list[dict]) -> str:
 | 遅延イベント | `enqueue(event, delay=...)` で遅延指定されたイベント |
 | 自己発火 | ボット自身が `emit_event` ツールで新しいイベントを生成すること |
 | invocation_state | strands-agentsのツール間で共有される状態オブジェクト |
-| system_prompt | Markdownプロンプト群 + 動的メモ + Short-term要約 + 実行時コンテキストを固定順で合成したLLMへの指示 |
+| system_prompt | Markdownプロンプト群 + Dynamic Notes + Short-term要約 + 実行時コンテキストを固定順で合成したLLMへの指示 |
 | query_prompt | イベントタイプに応じて生成されるユーザークエリ |
 | LLM Wiki | ファイルシステム上の Markdown ファイル群で構成される Long-term Memory |
 | 段階的開示 | LLM が必要な時だけ wiki ツールで情報を取得する方式（一括埋め込みしない） |
