@@ -8,6 +8,8 @@
 | 非同期 | asyncio | イベント駆動処理 |
 | Agent Framework | strands-agents | LLMエージェント実装 |
 | LLM Gateway | LiteLLM | 複数LLMプロバイダ対応 |
+| Frontend | React / TypeScript | 独自UI実装 |
+| Agentic UI | CopilotKit | チャットUI、Generative UI、Agent接続 |
 
 ### 5.2 インフラ
 
@@ -23,7 +25,8 @@
 
 | プラットフォーム | SDK/API | フェーズ |
 |------------------|---------|----------|
-| Slack | slack-sdk (async) | Phase 2 |
+| 独自UI | CopilotKit | Phase 2 |
+| Slack | slack-sdk (async) | Phase 3 |
 | Discord | discord.py | 将来 |
 | Email | aiosmtplib | 将来 |
 
@@ -104,4 +107,3 @@ async def call_llm(config: LLMConfig, messages: list[dict]) -> str:
 | 自己改善 | 慎重な判断、自己認識 | 高性能モデル |
 
 ---
-

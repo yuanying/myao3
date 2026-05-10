@@ -13,6 +13,7 @@
 | 遅延イベント | `enqueue(event, delay=...)` で遅延指定されたイベント |
 | 自己発火 | ボット自身が `emit_event` ツールで新しいイベントを生成すること |
 | invocation_state | strands-agentsのツール間で共有される状態オブジェクト |
+| CopilotKit UI | Slack連携前に記憶とコミュニケーションを検証するための独自チャットUI |
 | system_prompt | Markdownプロンプト群 + Dynamic Notes + Short-term要約 + 実行時コンテキストを固定順で合成したLLMへの指示 |
 | query_prompt | イベントタイプに応じて生成されるユーザークエリ |
 | LLM Wiki | ファイルシステム上の Markdown ファイル群で構成される Long-term Memory |
@@ -23,4 +24,3 @@
 | Dynamic Notes | 自己改善で追加され、system_prompt 合成時に限定的に注入される行動メモ |
 
 ---
-

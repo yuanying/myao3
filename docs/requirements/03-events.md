@@ -14,9 +14,9 @@
 class EventType(Enum):
     PING = "ping"                    # Phase 1
     MESSAGE = "message"              # Phase 2
-    REACTION = "reaction"            # Phase 2
-    PRESENCE = "presence"            # Phase 3
-    SCHEDULED = "scheduled"          # Phase 3
+    REACTION = "reaction"            # Phase 3
+    PRESENCE = "presence"            # Phase 4
+    SCHEDULED = "scheduled"          # Phase 4
     SELF_TRIGGERED = "self_triggered"  # ボット自身が発火
     CHANNEL_UPDATE = "channel_update"  # チャンネル情報更新
     # 拡張可能...
